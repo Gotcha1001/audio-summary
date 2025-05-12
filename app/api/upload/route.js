@@ -671,6 +671,519 @@
 //   return html;
 // }
 
+// import { promises as fsPromises } from "fs";
+// import fs from "fs";
+// import path from "path";
+// import { jsPDF } from "jspdf";
+// import OpenAI from "openai";
+// import * as mm from "music-metadata";
+// import { Document, Packer, Paragraph } from "docx";
+
+// // Initialize OpenAI client
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// // Utility function for logging memory usage
+// function logMemoryUsage(context = "General") {
+//   const memoryUsage = process.memoryUsage();
+//   console.log(`[${context}] Memory Usage:`, {
+//     rss: `${(memoryUsage.rss / 1024 / 1024).toFixed(2)}MB`,
+//     heapUsed: `${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`,
+//   });
+// }
+
+// // Markdown to plain text conversion
+// function markdownToPlainText(markdown) {
+//   if (!markdown || typeof markdown !== "string") return "";
+//   return (
+//     markdown
+//       // Remove headers
+//       .replace(/^#+\s*/gm, "")
+//       // Remove bold and italic formatting
+//       .replace(/(\*\*|__)/g, "")
+//       .replace(/(\*|_)/g, "")
+//       // Remove list markers
+//       .replace(/^[\-*]\s*/gm, "")
+//       .replace(/^\d+\.\s*/gm, "")
+//       // Trim extra whitespace
+//       .replace(/\n{2,}/g, "\n\n")
+//       .trim()
+//   );
+// }
+
+// // Generate PDF using jsPDF with in-memory buffer
+// function generatePDFWithJSPDF(minutes, pdfPath) {
+//   return new Promise((resolve, reject) => {
+//     try {
+//       // Create a new jsPDF document
+//       const doc = new jsPDF({
+//         orientation: "portrait",
+//         unit: "pt",
+//         format: "a4",
+//       });
+
+//       // Set font and size
+//       doc.setFont("helvetica", "normal");
+//       doc.setFontSize(12);
+
+//       // Format the text
+//       const plainText = markdownToPlainText(minutes);
+//       const paragraphs = plainText.split("\n\n");
+
+//       // Log paragraph count and sample for debugging
+//       console.log(
+//         `Rendering ${paragraphs.length} paragraphs:`,
+//         paragraphs.slice(0, 2)
+//       );
+
+//       let yPosition = 40; // Start position from top
+//       const margin = 40;
+//       const pageWidth = doc.internal.pageSize.width;
+//       const maxWidth = pageWidth - 2 * margin;
+
+//       paragraphs.forEach((paragraph, i) => {
+//         if (paragraph && typeof paragraph === "string" && paragraph.trim()) {
+//           // Split text to fit within page width
+//           const lines = doc.splitTextToSize(paragraph.trim(), maxWidth);
+//           doc.text(lines, margin + 20, yPosition, { align: "left" });
+
+//           // Update yPosition for next paragraph
+//           yPosition += lines.length * 14 + 10; // Approximate line height + gap
+
+//           // Check if we need a new page
+//           if (yPosition > doc.internal.pageSize.height - margin) {
+//             doc.addPage();
+//             yPosition = 40;
+//           }
+//         } else {
+//           console.warn(`Skipping invalid paragraph at index ${i}:`, paragraph);
+//         }
+//       });
+
+//       // Get PDF as ArrayBuffer and write to file
+//       const pdfBuffer = doc.output("arraybuffer");
+//       fs.writeFileSync(pdfPath, Buffer.from(pdfBuffer));
+//       console.log("PDF generation completed successfully");
+
+//       // Synchronous check for file existence
+//       if (fs.existsSync(pdfPath)) {
+//         console.log(`PDF file exists at: ${pdfPath}`);
+//       } else {
+//         console.error(`PDF file not created at: ${pdfPath}`);
+//         reject(new Error(`PDF file not created at: ${pdfPath}`));
+//         return;
+//       }
+
+//       // Async check for confirmation
+//       fsPromises
+//         .access(pdfPath)
+//         .then(() =>
+//           console.log(`Async check: PDF file confirmed at: ${pdfPath}`)
+//         )
+//         .catch((err) =>
+//           console.error(`Async check: PDF file not found at: ${pdfPath}`, err)
+//         );
+
+//       logMemoryUsage("PDF Generated");
+//       // Add delay to ensure filesystem consistency
+//       setTimeout(() => resolve(true), 500);
+//     } catch (error) {
+//       console.error("PDF generation error:", {
+//         message: error.message,
+//         stack: error.stack,
+//       });
+//       reject(error);
+//     }
+//   });
+// }
+
+// // Generate Word document using docx
+// function generateDocx(minutes, docxPath) {
+//   return new Promise((resolve, reject) => {
+//     try {
+//       const plainText = markdownToPlainText(minutes);
+//       const paragraphs = plainText
+//         .split("\n\n")
+//         .map((text) => new Paragraph({ text }));
+
+//       const doc = new Document({
+//         sections: [
+//           {
+//             properties: {},
+//             children: paragraphs,
+//           },
+//         ],
+//       });
+
+//       Packer.toBuffer(doc).then((buffer) => {
+//         fs.writeFileSync(docxPath, buffer);
+//         console.log("Word document generation completed successfully");
+
+//         // Synchronous check for file existence
+//         if (fs.existsSync(docxPath)) {
+//           console.log(`Word file exists at: ${docxPath}`);
+//         } else {
+//           console.error(`Word file not created at: ${docxPath}`);
+//           reject(new Error(`Word file not created at: ${docxPath}`));
+//           return;
+//         }
+
+//         // Async check for confirmation
+//         fsPromises
+//           .access(docxPath)
+//           .then(() =>
+//             console.log(`Async check: Word file confirmed at: ${docxPath}`)
+//           )
+//           .catch((err) =>
+//             console.error(
+//               `Async check: Word file not found at: ${docxPath}`,
+//               err
+//             )
+//           );
+
+//         logMemoryUsage("Word Generated");
+//         setTimeout(() => resolve(true), 500);
+//       });
+//     } catch (error) {
+//       console.error("Word generation error:", {
+//         message: error.message,
+//         stack: error.stack,
+//       });
+//       reject(error);
+//     }
+//   });
+// }
+
+// // Memory-efficient file handling
+// async function streamToBuffer(stream) {
+//   return new Promise((resolve, reject) => {
+//     const chunks = [];
+//     stream.on("data", (chunk) => chunks.push(chunk));
+//     stream.on("end", () => resolve(Buffer.concat(chunks)));
+//     stream.on("error", reject);
+//   });
+// }
+
+// // Cleanup function to remove temporary files
+// async function cleanupTempFiles(...filePaths) {
+//   for (const filePath of filePaths) {
+//     try {
+//       await fsPromises.unlink(filePath).catch(() => {});
+//     } catch (error) {
+//       console.error(`Failed to delete file ${filePath}:`, error);
+//     }
+//   }
+// }
+
+// // Main POST handler
+// export async function POST(req) {
+//   const startTime = Date.now();
+//   const timeoutLimit = 50_000; // 50 seconds to stay under 60s Vercel limit
+
+//   // Use Vercel's writable tmp directory
+//   const uploadDir = path.join(process.cwd(), "tmp", "Uploads");
+//   let filePath = null;
+//   let pdfFileName = null;
+//   let markdownFileName = null;
+//   let docxFileName = null;
+
+//   try {
+//     // Ensure upload directory exists
+//     await fsPromises.mkdir(uploadDir, { recursive: true });
+
+//     // Parse uploaded file
+//     const formData = await req.formData();
+//     const file = formData.get("file");
+
+//     if (!file) {
+//       return Response.json({ error: "No file uploaded" }, { status: 400 });
+//     }
+
+//     // Validate file type and size
+//     const allowedTypes = ["audio/mpeg", "audio/wav"];
+//     if (!allowedTypes.includes(file.type)) {
+//       return Response.json(
+//         { error: "Invalid file type. Only MP3 and WAV are supported." },
+//         { status: 400 }
+//       );
+//     }
+
+//     if (file.size > 5 * 1024 * 1024) {
+//       // 5MB limit
+//       return Response.json(
+//         { error: "File size exceeds 5MB limit." },
+//         { status: 400 }
+//       );
+//     }
+
+//     // Save file with unique name
+//     const fileName = `${Date.now()}-${file.name}`;
+//     filePath = path.join(uploadDir, fileName);
+
+//     let fileBuffer = await file.arrayBuffer();
+//     await fsPromises.writeFile(filePath, Buffer.from(fileBuffer));
+
+//     // Log audio duration
+//     let audioDuration = 0;
+//     try {
+//       const metadata = await mm.parseFile(filePath);
+//       audioDuration = metadata.format.duration || 0;
+//       console.log(`Audio duration: ${audioDuration.toFixed(2)} seconds`);
+//     } catch (error) {
+//       console.warn("Failed to parse audio metadata:", error.message);
+//     }
+
+//     // Free memory
+//     fileBuffer = null;
+//     logMemoryUsage("File Saved");
+
+//     // Check timeout
+//     if (Date.now() - startTime > timeoutLimit) {
+//       await cleanupTempFiles(filePath);
+//       return Response.json(
+//         { error: "Processing timeout: File saving took too long." },
+//         { status: 504 }
+//       );
+//     }
+
+//     // Transcribe audio file
+//     const fileStream = fs.createReadStream(filePath);
+//     const transcriptionResponse = await openai.audio.transcriptions.create({
+//       model: "whisper-1",
+//       file: fileStream,
+//       response_format: "text",
+//       language: "en",
+//     });
+
+//     // Explicitly close stream
+//     fileStream.destroy();
+
+//     const transcription = transcriptionResponse || "";
+
+//     if (!transcription || transcription.trim().length === 0) {
+//       await cleanupTempFiles(filePath);
+//       return Response.json(
+//         { error: "Transcription failed: No content was transcribed." },
+//         { status: 500 }
+//       );
+//     }
+
+//     // Clean up audio file immediately
+//     await cleanupTempFiles(filePath);
+//     filePath = null;
+//     logMemoryUsage("Transcription Complete");
+
+//     // Check timeout
+//     if (Date.now() - startTime > timeoutLimit) {
+//       return Response.json(
+//         { error: "Processing timeout: Transcription took too long." },
+//         { status: 504 }
+//       );
+//     }
+
+//     // Generate minutes using GPT-4o-mini
+//     const completion = await openai.chat.completions.create({
+//       model: "gpt-4o-mini",
+//       messages: [
+//         {
+//           role: "system",
+//           content: `Create comprehensive meeting minutes from transcriptions.
+//           Structure:
+//           # Meeting Minutes
+//           ## Participants
+//           ## Key Discussion Points
+//           ## Decisions
+//           ## Action Items
+//           ## Next Steps
+
+//           Use markdown formatting.`,
+//         },
+//         {
+//           role: "user",
+//           content: `Create detailed meeting minutes from this transcription:\n${transcription}`,
+//         },
+//       ],
+//       max_tokens: 500, // Reduced to optimize memory and cost
+//     });
+
+//     const minutes = completion.choices[0].message.content || "";
+//     if (!minutes.trim()) {
+//       return Response.json(
+//         { error: "Failed to generate meeting minutes." },
+//         { status: 500 }
+//       );
+//     }
+
+//     // Log token usage and estimated cost
+//     console.log("Completion usage:", completion.usage);
+//     const tokenCost =
+//       completion.usage.prompt_tokens * 0.00000015 +
+//       completion.usage.completion_tokens * 0.0000006;
+//     const transcriptionCost = (audioDuration / 60) * 0.006;
+//     console.log(
+//       `Estimated OpenAI cost: $${(tokenCost + transcriptionCost).toFixed(
+//         5
+//       )} (Transcription: $${transcriptionCost.toFixed(
+//         5
+//       )}, Completion: $${tokenCost.toFixed(5)})`
+//     );
+//     logMemoryUsage("Minutes Generated");
+
+//     // Check timeout
+//     if (Date.now() - startTime > timeoutLimit) {
+//       return Response.json(
+//         { error: "Processing timeout: Minutes generation took too long." },
+//         { status: 504 }
+//       );
+//     }
+
+//     // Save markdown file
+//     markdownFileName = `minutes-${Date.now()}.md`;
+//     const markdownPath = path.join(uploadDir, markdownFileName);
+//     await fsPromises.writeFile(markdownPath, minutes);
+
+//     // PDF Generation with jsPDF
+//     let pdfGenerationSuccessful = false;
+//     pdfFileName = `minutes-${Date.now()}.pdf`;
+//     const pdfPath = path.join(uploadDir, pdfFileName);
+
+//     try {
+//       pdfGenerationSuccessful = await generatePDFWithJSPDF(minutes, pdfPath);
+//     } catch (error) {
+//       console.warn("PDF generation failed:", error.message);
+//       pdfGenerationSuccessful = false;
+//     }
+
+//     if (!pdfGenerationSuccessful || !fs.existsSync(pdfPath)) {
+//       console.warn("PDF not generated or not found; skipping PDF response");
+//       pdfFileName = null;
+//     }
+
+//     // Word Document Generation with docx
+//     let docxGenerationSuccessful = false;
+//     docxFileName = `minutes-${Date.now()}.docx`;
+//     const docxPath = path.join(uploadDir, docxFileName);
+
+//     try {
+//       docxGenerationSuccessful = await generateDocx(minutes, docxPath);
+//     } catch (error) {
+//       console.warn("Word document generation failed:", error.message);
+//       docxGenerationSuccessful = false;
+//     }
+
+//     if (!docxGenerationSuccessful || !fs.existsSync(docxPath)) {
+//       console.warn(
+//         "Word document not generated or not found; skipping Word response"
+//       );
+//       docxFileName = null;
+//     }
+
+//     // Calculate processing time
+//     const processingTime = Date.now() - startTime;
+//     console.log(`Total processing time: ${processingTime}ms`);
+
+//     // Log response for debugging
+//     const response = {
+//       success: true,
+//       minutes: minutes,
+//       pdfPath: pdfFileName ? `/Uploads/${pdfFileName}` : null,
+//       markdownPath: `/Uploads/${markdownFileName}`,
+//       docxPath: docxFileName ? `/Uploads/${docxFileName}` : null,
+//       processingTime: processingTime,
+//       audioDuration: audioDuration.toFixed(2),
+//       estimatedCost: (tokenCost + transcriptionCost).toFixed(5),
+//       pdfExists: pdfFileName ? fs.existsSync(pdfPath) : false,
+//       docxExists: docxFileName ? fs.existsSync(docxPath) : false,
+//     };
+//     console.log("Response sent:", response);
+
+//     // Return response with public URLs
+//     return Response.json(response);
+//   } catch (error) {
+//     console.error("Processing Error:", {
+//       message: error.message,
+//       stack: error.stack,
+//       name: error.name,
+//     });
+
+//     if (filePath) await cleanupTempFiles(filePath);
+
+//     return Response.json(
+//       {
+//         error: `File processing failed: ${error.message || "Unknown error"}`,
+//         details: error.toString(),
+//       },
+//       { status: 500 }
+//     );
+//   }
+// }
+
+// // GET handler for file downloads
+// export async function GET(req) {
+//   const { searchParams } = new URL(req.url);
+//   const filename = searchParams.get("filename");
+
+//   console.log(`Download requested for filename: ${filename}`);
+
+//   if (!filename || filename === "null") {
+//     return Response.json(
+//       { error: "No valid filename provided" },
+//       { status: 400 }
+//     );
+//   }
+
+//   // Prevent path traversal
+//   const sanitizedFilename = path.basename(filename);
+//   const filePath = path.join(
+//     process.cwd(),
+//     "tmp",
+//     "Uploads",
+//     sanitizedFilename
+//   );
+
+//   try {
+//     await fsPromises.access(filePath);
+//     const fileContents = await fsPromises.readFile(filePath);
+
+//     // Determine content type
+//     const ext = path.extname(sanitizedFilename).toLowerCase();
+//     let contentType = "application/octet-stream";
+
+//     switch (ext) {
+//       case ".pdf":
+//         contentType = "application/pdf";
+//         break;
+//       case ".md":
+//         contentType = "text/markdown";
+//         break;
+//       case ".docx":
+//         contentType =
+//           "application/vnd.openxmlformats-officedocument.wordprocessingml.document";
+//         break;
+//     }
+
+//     return new Response(fileContents, {
+//       headers: {
+//         "Content-Type": contentType,
+//         "Content-Disposition": `attachment; filename="${sanitizedFilename}"`,
+//       },
+//     });
+//   } catch (error) {
+//     console.error(`Error serving file ${sanitizedFilename}:`, {
+//       message: error.message,
+//       code: error.code,
+//       stack: error.stack,
+//     });
+
+//     return Response.json(
+//       {
+//         error: "File not found",
+//         details: error.message,
+//       },
+//       { status: 404 }
+//     );
+//   }
+// }
+
 import { promises as fsPromises } from "fs";
 import fs from "fs";
 import path from "path";
@@ -879,16 +1392,33 @@ export async function POST(req) {
   const startTime = Date.now();
   const timeoutLimit = 50_000; // 50 seconds to stay under 60s Vercel limit
 
-  // Use Vercel's writable tmp directory
-  const uploadDir = path.join(process.cwd(), "tmp", "Uploads");
+  // Use Vercel's /tmp directory, fallback to local tmp
+  const isVercel = process.env.VERCEL === "1";
+  let uploadDir = isVercel
+    ? "/tmp/Uploads"
+    : path.join(process.cwd(), "tmp", "Uploads");
   let filePath = null;
   let pdfFileName = null;
   let markdownFileName = null;
   let docxFileName = null;
 
   try {
+    // Log resolved uploadDir for debugging
+    console.log(`Resolved uploadDir: ${uploadDir}`);
+
     // Ensure upload directory exists
-    await fsPromises.mkdir(uploadDir, { recursive: true });
+    try {
+      await fsPromises.mkdir(uploadDir, { recursive: true });
+      console.log(`Created uploadDir: ${uploadDir}`);
+    } catch (mkdirError) {
+      console.error(`Failed to create uploadDir: ${uploadDir}`, mkdirError);
+      // Fallback to /tmp
+      uploadDir = "/tmp";
+      console.log(`Falling back to uploadDir: ${uploadDir}`);
+      await fsPromises.mkdir(uploadDir, { recursive: true }).catch((err) => {
+        console.error(`Failed to create fallback uploadDir: ${uploadDir}`, err);
+      });
+    }
 
     // Parse uploaded file
     const formData = await req.formData();
@@ -1133,12 +1663,13 @@ export async function GET(req) {
 
   // Prevent path traversal
   const sanitizedFilename = path.basename(filename);
-  const filePath = path.join(
-    process.cwd(),
-    "tmp",
-    "Uploads",
-    sanitizedFilename
-  );
+  const isVercel = process.env.VERCEL === "1";
+  const uploadDir = isVercel
+    ? "/tmp/Uploads"
+    : path.join(process.cwd(), "tmp", "Uploads");
+  const filePath = path.join(uploadDir, sanitizedFilename);
+
+  console.log(`Resolved filePath: ${filePath}`);
 
   try {
     await fsPromises.access(filePath);
