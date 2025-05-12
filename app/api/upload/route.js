@@ -1716,13 +1716,470 @@
 //   }
 // }
 
+// import { promises as fsPromises } from "fs";
+// import path from "path";
+// import os from "os";
+// import { jsPDF } from "jspdf";
+// import OpenAI from "openai";
+// import * as mm from "music-metadata";
+// import { Document, Packer, Paragraph } from "docx";
+// import fs from "fs";
+
+// // Initialize OpenAI client
+// const openai = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+
+// // Utility function for logging memory usage
+// function logMemoryUsage(context = "General") {
+//   const memoryUsage = process.memoryUsage();
+//   console.log(`[${context}] Memory Usage:`, {
+//     rss: `${(memoryUsage.rss / 1024 / 1024).toFixed(2)}MB`,
+//     heapUsed: `${(memoryUsage.heapUsed / 1024 / 1024).toFixed(2)}MB`,
+//   });
+// }
+
+// // Sanitize file name to avoid invalid characters
+// function sanitizeFileName(fileName) {
+//   return fileName.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\s+/g, "_");
+// }
+
+// // Markdown to plain text conversion
+// function markdownToPlainText(markdown) {
+//   if (!markdown || typeof markdown !== "string") {
+//     console.warn("Invalid markdown input:", markdown);
+//     return "";
+//   }
+//   return markdown
+//     .replace(/^#+\s*/gm, "")
+//     .replace(/(\*\*|__)/g, "")
+//     .replace(/(\*|_)/g, "")
+//     .replace(/^[\-*]\s*/gm, "")
+//     .replace(/^\d+\.\s*/gm, "")
+//     .replace(/\n{2,}/g, "\n\n")
+//     .trim();
+// }
+
+// // Generate PDF using jsPDF and return base64
+// function generatePDFWithJSPDF(minutes) {
+//   return new Promise((resolve, reject) => {
+//     try {
+//       console.log("Starting PDF generation");
+//       if (!minutes || typeof minutes !== "string") {
+//         throw new Error("Invalid minutes input for PDF generation");
+//       }
+//       const doc = new jsPDF({
+//         orientation: "portrait",
+//         unit: "pt",
+//         format: "a4",
+//       });
+//       doc.setFont("helvetica", "normal");
+//       doc.setFontSize(12);
+//       const plainText = markdownToPlainText(minutes);
+//       if (!plainText) {
+//         throw new Error("No valid text to render in PDF");
+//       }
+//       const paragraphs = plainText.split("\n\n");
+//       console.log(`Rendering ${paragraphs.length} paragraphs in PDF`);
+//       let yPosition = 40;
+//       const margin = 40;
+//       const pageWidth = doc.internal.pageSize.width;
+//       const maxWidth = pageWidth - 2 * margin;
+
+//       paragraphs.forEach((paragraph, i) => {
+//         if (paragraph && typeof paragraph === "string" && paragraph.trim()) {
+//           const lines = doc.splitTextToSize(paragraph.trim(), maxWidth);
+//           doc.text(lines, margin + 20, yPosition, { align: "left" });
+//           yPosition += lines.length * 14 + 10;
+//           if (yPosition > doc.internal.pageSize.height - margin) {
+//             doc.addPage();
+//             yPosition = 40;
+//           }
+//         }
+//       });
+
+//       const pdfBuffer = doc.output("arraybuffer");
+//       const pdfBase64 = Buffer.from(pdfBuffer).toString("base64");
+//       console.log(`PDF generated, base64 length: ${pdfBase64.length}`);
+//       logMemoryUsage("PDF Generated");
+//       resolve(pdfBase64);
+//     } catch (error) {
+//       console.error("PDF generation error:", {
+//         message: error.message,
+//         stack: error.stack,
+//       });
+//       reject(error);
+//     }
+//   });
+// }
+
+// // Generate Word document using docx and return base64
+// function generateDocx(minutes) {
+//   return new Promise((resolve, reject) => {
+//     try {
+//       console.log("Starting Word document generation");
+//       if (!minutes || typeof minutes !== "string") {
+//         throw new Error("Invalid minutes input for Word generation");
+//       }
+//       const plainText = markdownToPlainText(minutes);
+//       if (!plainText) {
+//         throw new Error("No valid text to render in Word document");
+//       }
+//       const paragraphs = plainText
+//         .split("\n\n")
+//         .map((text) => new Paragraph({ text }));
+
+//       const doc = new Document({
+//         sections: [{ properties: {}, children: paragraphs }],
+//       });
+
+//       Packer.toBuffer(doc)
+//         .then((buffer) => {
+//           const docxBase64 = Buffer.from(buffer).toString("base64");
+//           console.log(
+//             `Word document generated, base64 length: ${docxBase64.length}`
+//           );
+//           logMemoryUsage("Word Generated");
+//           resolve(docxBase64);
+//         })
+//         .catch((error) => {
+//           console.error("Word buffer error:", error);
+//           reject(error);
+//         });
+//     } catch (error) {
+//       console.error("Word generation error:", {
+//         message: error.message,
+//         stack: error.stack,
+//       });
+//       reject(error);
+//     }
+//   });
+// }
+
+// // Generate markdown and return base64
+// function generateMarkdown(minutes) {
+//   try {
+//     console.log("Starting Markdown generation");
+//     if (!minutes || typeof minutes !== "string") {
+//       throw new Error("Invalid minutes input for Markdown generation");
+//     }
+//     const markdownBase64 = Buffer.from(minutes).toString("base64");
+//     console.log(`Markdown generated, base64 length: ${markdownBase64.length}`);
+//     logMemoryUsage("Markdown Generated");
+//     return markdownBase64;
+//   } catch (error) {
+//     console.error("Markdown generation error:", {
+//       message: error.message,
+//       stack: error.stack,
+//     });
+//     throw error;
+//   }
+// }
+
+// // Cleanup function
+// async function cleanupTempFiles(...filePaths) {
+//   for (const filePath of filePaths) {
+//     try {
+//       if (filePath && (await fsPromises.stat(filePath)).isFile()) {
+//         await fsPromises.unlink(filePath);
+//         console.log(`Cleaned up file: ${filePath}`);
+//       }
+//     } catch (error) {
+//       console.warn(`Failed to clean up file ${filePath}:`, error.message);
+//     }
+//   }
+// }
+
+// // Ensure directory exists
+// async function ensureDirectoryExists(dirPath) {
+//   try {
+//     await fsPromises.mkdir(dirPath, { recursive: true });
+//     console.log(`Ensured directory exists: ${dirPath}`);
+//   } catch (error) {
+//     console.error(`Failed to create directory ${dirPath}:`, error);
+//     throw error;
+//   }
+// }
+
+// // Main POST handler
+// export async function POST(req) {
+//   const startTime = Date.now();
+//   const timeoutLimit = 50_000; // 50 seconds
+//   let filePath = null;
+
+//   try {
+//     // Parse uploaded file
+//     const formData = await req.formData();
+//     const file = formData.get("file");
+
+//     if (!file) {
+//       return Response.json({ error: "No file uploaded" }, { status: 400 });
+//     }
+
+//     // Validate file type and size
+//     const allowedTypes = ["audio/mpeg", "audio/wav"];
+//     if (!allowedTypes.includes(file.type)) {
+//       return Response.json(
+//         { error: "Invalid file type. Only MP3 and WAV are supported." },
+//         { status: 400 }
+//       );
+//     }
+
+//     if (file.size > 5 * 1024 * 1024) {
+//       return Response.json(
+//         { error: "File size exceeds 5MB limit." },
+//         { status: 400 }
+//       );
+//     }
+
+//     // Sanitize file name
+//     const rawFileName = file.name || `upload-${Date.now()}`;
+//     const sanitizedFileName = sanitizeFileName(`${Date.now()}-${rawFileName}`);
+//     const tempDir = os.tmpdir();
+//     filePath = path.join(tempDir, sanitizedFileName);
+
+//     // Ensure the temp directory exists
+//     await ensureDirectoryExists(tempDir);
+
+//     // Save file to temp directory
+//     const fileBuffer = await file.arrayBuffer();
+//     try {
+//       await fsPromises.writeFile(filePath, Buffer.from(fileBuffer));
+//       console.log(`File written to: ${filePath}`);
+//       const stats = await fsPromises.stat(filePath);
+//       console.log(`File stats: size=${stats.size} bytes`);
+//     } catch (writeError) {
+//       console.error("File write error:", writeError);
+//       return Response.json(
+//         { error: `Failed to save file: ${writeError.message}` },
+//         { status: 500 }
+//       );
+//     }
+
+//     // Verify file exists
+//     try {
+//       await fsPromises.access(filePath, fs.constants.F_OK);
+//       console.log(`File verified at: ${filePath}`);
+//     } catch (accessError) {
+//       console.error("File access error:", accessError);
+//       await cleanupTempFiles(filePath);
+//       return Response.json(
+//         { error: "File not found after saving." },
+//         { status: 500 }
+//       );
+//     }
+
+//     // Log audio duration
+//     let audioDuration = 0;
+//     try {
+//       const metadata = await mm.parseFile(filePath);
+//       audioDuration = metadata.format.duration || 0;
+//       console.log(`Audio duration: ${audioDuration.toFixed(2)} seconds`);
+//     } catch (error) {
+//       console.warn("Failed to parse audio metadata:", error.message);
+//     }
+
+//     logMemoryUsage("File Saved");
+
+//     // Check timeout
+//     if (Date.now() - startTime > timeoutLimit) {
+//       await cleanupTempFiles(filePath);
+//       return Response.json(
+//         { error: "Processing timeout: File saving took too long." },
+//         { status: 504 }
+//       );
+//     }
+
+//     // Transcribe audio file
+//     let fileStream;
+//     try {
+//       fileStream = fs.createReadStream(filePath);
+//       const transcriptionResponse = await openai.audio.transcriptions.create({
+//         model: "whisper-1",
+//         file: fileStream,
+//         response_format: "text",
+//         language: "en",
+//       });
+//       fileStream.destroy();
+//       console.log("Transcription completed successfully");
+//       const transcription = transcriptionResponse || "";
+//       if (!transcription || transcription.trim().length === 0) {
+//         await cleanupTempFiles(filePath);
+//         return Response.json(
+//           { error: "Transcription failed: No content was transcribed." },
+//           { status: 500 }
+//         );
+//       }
+
+//       // Clean up audio file
+//       await cleanupTempFiles(filePath);
+//       filePath = null;
+//       logMemoryUsage("Transcription Complete");
+
+//       // Check timeout
+//       if (Date.now() - startTime > timeoutLimit) {
+//         return Response.json(
+//           { error: "Processing timeout: Transcription took too long." },
+//           { status: 504 }
+//         );
+//       }
+
+//       // Generate minutes using GPT-4o-mini
+//       console.log("Starting meeting minutes generation");
+//       const completion = await openai.chat.completions.create({
+//         model: "gpt-4o-mini",
+//         messages: [
+//           {
+//             role: "system",
+//             content: `Create comprehensive meeting minutes from transcriptions.
+//             Structure:
+//             # Meeting Minutes
+//             ## Participants
+//             ## Key Discussion Points
+//             ## Decisions
+//             ## Action Items
+//             ## Next Steps
+//             Use markdown formatting.`,
+//           },
+//           {
+//             role: "user",
+//             content: `Create detailed meeting minutes from this transcription:\n${transcription}`,
+//           },
+//         ],
+//         max_tokens: 500,
+//       });
+
+//       const minutes = completion.choices[0].message.content || "";
+//       if (!minutes.trim()) {
+//         return Response.json(
+//           { error: "Failed to generate meeting minutes." },
+//           { status: 500 }
+//         );
+//       }
+//       console.log(
+//         `Meeting minutes generated, length: ${minutes.length} characters`
+//       );
+//       console.log("Sample minutes:", minutes.slice(0, 200)); // Log first 200 chars for debugging
+
+//       // Log token usage and estimated cost
+//       console.log("Completion usage:", completion.usage);
+//       const tokenCost =
+//         completion.usage.prompt_tokens * 0.00000015 +
+//         completion.usage.completion_tokens * 0.0000006;
+//       const transcriptionCost = (audioDuration / 60) * 0.006;
+//       console.log(
+//         `Estimated OpenAI cost: $${(tokenCost + transcriptionCost).toFixed(
+//           5
+//         )} (Transcription: $${transcriptionCost.toFixed(
+//           5
+//         )}, Completion: $${tokenCost.toFixed(5)})`
+//       );
+//       logMemoryUsage("Minutes Generated");
+
+//       // Check timeout
+//       if (Date.now() - startTime > timeoutLimit) {
+//         return Response.json(
+//           { error: "Processing timeout: Minutes generation took too long." },
+//           { status: 504 }
+//         );
+//       }
+
+//       // Generate files in memory
+//       let pdfBase64 = null;
+//       let docxBase64 = null;
+//       let markdownBase64 = null;
+
+//       try {
+//         pdfBase64 = await generatePDFWithJSPDF(minutes);
+//       } catch (error) {
+//         console.warn("PDF generation failed:", error.message);
+//       }
+
+//       try {
+//         docxBase64 = await generateDocx(minutes);
+//       } catch (error) {
+//         console.warn("Word document generation failed:", error.message);
+//       }
+
+//       try {
+//         markdownBase64 = await generateMarkdown(minutes);
+//       } catch (error) {
+//         console.warn("Markdown generation failed:", error.message);
+//       }
+
+//       // Log response details with base64 lengths
+//       console.log("Sending response with base64 data:", {
+//         minutesLength: minutes.length,
+//         pdfBase64Length: pdfBase64 ? pdfBase64.length : null,
+//         docxBase64Length: docxBase64 ? docxBase64.length : null,
+//         markdownBase64Length: markdownBase64 ? markdownBase64.length : null,
+//       });
+
+//       // Check if all generations failed
+//       if (!pdfBase64 && !docxBase64 && !markdownBase64) {
+//         console.warn("All file generations failed");
+//         return Response.json({
+//           success: true,
+//           minutes,
+//           pdfBase64: null,
+//           docxBase64: null,
+//           markdownBase64: null,
+//           processingTime: Date.now() - startTime,
+//           audioDuration: audioDuration.toFixed(2),
+//           estimatedCost: (tokenCost + transcriptionCost).toFixed(5),
+//           warning:
+//             "File generation failed. Only meeting minutes are available.",
+//         });
+//       }
+
+//       // Calculate processing time
+//       const processingTime = Date.now() - startTime;
+//       console.log(`Total processing time: ${processingTime}ms`);
+
+//       // Return response
+//       return Response.json({
+//         success: true,
+//         minutes,
+//         pdfBase64,
+//         docxBase64,
+//         markdownBase64,
+//         processingTime,
+//         audioDuration: audioDuration.toFixed(2),
+//         estimatedCost: (tokenCost + transcriptionCost).toFixed(5),
+//       });
+//     } catch (transcriptionError) {
+//       console.error("Transcription error:", transcriptionError);
+//       if (fileStream) fileStream.destroy();
+//       await cleanupTempFiles(filePath);
+//       return Response.json(
+//         { error: "Transcription failed: " + transcriptionError.message },
+//         { status: 500 }
+//       );
+//     }
+//   } catch (error) {
+//     console.error("Processing Error:", {
+//       message: error.message,
+//       stack: error.stack,
+//       name: error.name,
+//     });
+
+//     if (filePath) await cleanupTempFiles(filePath);
+
+//     return Response.json(
+//       {
+//         error: `File processing failed: ${error.message || "Unknown error"}`,
+//         details: error.toString(),
+//       },
+//       { status: 500 }
+//     );
+//   }
+// }
+
 import { promises as fsPromises } from "fs";
 import path from "path";
 import os from "os";
 import { jsPDF } from "jspdf";
 import OpenAI from "openai";
 import * as mm from "music-metadata";
-import { Document, Packer, Paragraph } from "docx";
+import { Document, Packer, Paragraph, TextRun } from "docx";
 import fs from "fs";
 
 // Initialize OpenAI client
@@ -1742,7 +2199,7 @@ function sanitizeFileName(fileName) {
   return fileName.replace(/[^a-zA-Z0-9.-]/g, "_").replace(/\s+/g, "_");
 }
 
-// Markdown to plain text conversion
+// Markdown to plain text conversion (used elsewhere, not in generateDocx)
 function markdownToPlainText(markdown) {
   if (!markdown || typeof markdown !== "string") {
     console.warn("Invalid markdown input:", markdown);
@@ -1771,28 +2228,141 @@ function generatePDFWithJSPDF(minutes) {
         unit: "pt",
         format: "a4",
       });
-      doc.setFont("helvetica", "normal");
-      doc.setFontSize(12);
-      const plainText = markdownToPlainText(minutes);
-      if (!plainText) {
-        throw new Error("No valid text to render in PDF");
-      }
-      const paragraphs = plainText.split("\n\n");
-      console.log(`Rendering ${paragraphs.length} paragraphs in PDF`);
-      let yPosition = 40;
       const margin = 40;
       const pageWidth = doc.internal.pageSize.width;
       const maxWidth = pageWidth - 2 * margin;
+      let yPosition = 40;
 
-      paragraphs.forEach((paragraph, i) => {
-        if (paragraph && typeof paragraph === "string" && paragraph.trim()) {
-          const lines = doc.splitTextToSize(paragraph.trim(), maxWidth);
-          doc.text(lines, margin + 20, yPosition, { align: "left" });
-          yPosition += lines.length * 14 + 10;
-          if (yPosition > doc.internal.pageSize.height - margin) {
-            doc.addPage();
-            yPosition = 40;
+      // Split markdown into lines
+      const lines = minutes.split("\n").filter((line) => line.trim());
+
+      lines.forEach((line, index) => {
+        // Skip empty lines
+        if (!line.trim()) return;
+
+        const isHeader = line.startsWith("# ") || line.startsWith("## ");
+
+        // Set default font and color
+        doc.setFont("helvetica", "normal");
+        doc.setFontSize(12);
+        doc.setTextColor(0, 0, 0); // Black for regular text
+        let lineHeight = 14;
+        let extraSpacing = 10;
+        let parts = [];
+
+        // Handle headers
+        if (line.startsWith("# ")) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(16);
+          doc.setTextColor(128, 0, 128); // Purple for H1
+          lineHeight = 18;
+          extraSpacing = 12;
+          const headerText = line.slice(2).trim(); // Remove "# "
+          parts = [{ text: headerText, bold: true }]; // Entire header is bold
+        } else if (line.startsWith("## ")) {
+          doc.setFont("helvetica", "bold");
+          doc.setFontSize(14);
+          doc.setTextColor(128, 0, 128); // Purple for H2
+          lineHeight = 16;
+          extraSpacing = 10;
+          const headerText = line.slice(3).trim(); // Remove "## "
+          parts = [{ text: headerText, bold: true }]; // Entire header is bold
+        } else {
+          // Parse bold text for non-headers
+          let currentIndex = 0;
+          const boldRegex = /\*\*(.*?)\*\*/g;
+          let match;
+          while ((match = boldRegex.exec(line)) !== null) {
+            const before = line.slice(currentIndex, match.index);
+            if (before) parts.push({ text: before, bold: false });
+            parts.push({ text: match[1], bold: true });
+            currentIndex = match.index + match[0].length;
           }
+          if (currentIndex < line.length) {
+            parts.push({ text: line.slice(currentIndex), bold: false });
+          }
+          if (parts.length === 0) {
+            parts.push({ text: line, bold: false });
+          }
+        }
+
+        // Split the line into segments that fit within maxWidth
+        let currentX = margin;
+        parts.forEach((part) => {
+          doc.setFont("helvetica", part.bold ? "bold" : "normal");
+          if (!isHeader) {
+            doc.setTextColor(0, 0, 0); // Black for non-headers
+          }
+          const words = part.text.split(" ");
+          let currentLine = "";
+          let wordIndex = 0;
+
+          while (wordIndex < words.length) {
+            // Try adding the next word
+            const testLine = currentLine
+              ? `${currentLine} ${words[wordIndex]}`
+              : words[wordIndex];
+            const testWidth = doc.getTextWidth(testLine);
+
+            if (testWidth <= maxWidth) {
+              currentLine = testLine;
+              wordIndex++;
+            } else {
+              // Render the current line if it exists
+              if (currentLine) {
+                doc.text(currentLine, currentX, yPosition, { align: "left" });
+                yPosition += lineHeight;
+                currentLine = "";
+              } else {
+                // Single word too long, split it
+                let subWord = words[wordIndex];
+                while (subWord && doc.getTextWidth(subWord) > maxWidth) {
+                  // Estimate characters that fit
+                  let chars = Math.floor(
+                    subWord.length * (maxWidth / doc.getTextWidth(subWord))
+                  );
+                  doc.text(subWord.slice(0, chars), currentX, yPosition, {
+                    align: "left",
+                  });
+                  yPosition += lineHeight;
+                  subWord = subWord.slice(chars);
+                  // Check page overflow
+                  if (yPosition > doc.internal.pageSize.height - margin) {
+                    doc.addPage();
+                    yPosition = 40;
+                  }
+                }
+                if (subWord) {
+                  currentLine = subWord;
+                }
+                wordIndex++;
+              }
+            }
+
+            // Check page overflow
+            if (yPosition > doc.internal.pageSize.height - margin) {
+              doc.addPage();
+              yPosition = 40;
+            }
+          }
+
+          // Render any remaining text in currentLine
+          if (currentLine) {
+            doc.text(currentLine, currentX, yPosition, { align: "left" });
+            yPosition += lineHeight;
+          }
+        });
+
+        // Add extra spacing after the line
+        yPosition += extraSpacing;
+
+        // Check page overflow for the next line
+        if (
+          yPosition > doc.internal.pageSize.height - margin &&
+          index < lines.length - 1
+        ) {
+          doc.addPage();
+          yPosition = 40;
         }
       });
 
@@ -1819,16 +2389,90 @@ function generateDocx(minutes) {
       if (!minutes || typeof minutes !== "string") {
         throw new Error("Invalid minutes input for Word generation");
       }
-      const plainText = markdownToPlainText(minutes);
-      if (!plainText) {
-        throw new Error("No valid text to render in Word document");
-      }
-      const paragraphs = plainText
-        .split("\n\n")
-        .map((text) => new Paragraph({ text }));
 
+      // Split markdown into lines and create paragraphs
+      const lines = minutes.split("\n").filter((line) => line.trim());
+      const paragraphs = [];
+
+      lines.forEach((line) => {
+        // Skip empty lines
+        if (!line.trim()) return;
+
+        // Handle headers
+        if (line.startsWith("# ")) {
+          paragraphs.push(
+            new Paragraph({
+              text: line.slice(2).trim(),
+              heading: "Heading1",
+              thematicBreak: true,
+              spacing: { after: 240 }, // 12pt spacing after
+              children: [
+                new TextRun({
+                  text: line.slice(2).trim(),
+                  bold: true,
+                  size: 32, // 16pt
+                  color: "800080", // Purple
+                }),
+              ],
+            })
+          );
+        } else if (line.startsWith("## ")) {
+          paragraphs.push(
+            new Paragraph({
+              text: line.slice(3).trim(),
+              heading: "Heading2",
+              spacing: { after: 200 }, // 10pt spacing after
+              children: [
+                new TextRun({
+                  text: line.slice(3).trim(),
+                  bold: true,
+                  size: 28, // 14pt
+                  color: "800080", // Purple
+                }),
+              ],
+            })
+          );
+        } else {
+          // Handle regular lines with bold text (**text**)
+          const textRuns = [];
+          let currentIndex = 0;
+          const boldRegex = /\*\*(.*?)\*\*/g;
+          let match;
+
+          while ((match = boldRegex.exec(line)) !== null) {
+            const before = line.slice(currentIndex, match.index);
+            if (before) {
+              textRuns.push(new TextRun({ text: before, bold: false }));
+            }
+            textRuns.push(new TextRun({ text: match[1], bold: true }));
+            currentIndex = match.index + match[0].length;
+          }
+          if (currentIndex < line.length) {
+            textRuns.push(
+              new TextRun({ text: line.slice(currentIndex), bold: false })
+            );
+          }
+          if (textRuns.length === 0) {
+            textRuns.push(new TextRun({ text: line, bold: false }));
+          }
+
+          paragraphs.push(
+            new Paragraph({
+              children: textRuns,
+              spacing: { after: 120 }, // 6pt spacing after
+            })
+          );
+        }
+      });
+
+      // Create document
       const doc = new Document({
-        sections: [{ properties: {}, children: paragraphs }],
+        sections: [
+          {
+            properties: {},
+            children: paragraphs,
+          },
+        ],
       });
 
       Packer.toBuffer(doc)
