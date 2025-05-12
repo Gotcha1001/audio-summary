@@ -9,6 +9,8 @@ export default function Upload() {
     const [success, setSuccess] = useState('');
     const [minutes, setMinutes] = useState('');
     const [pdfPath, setPdfPath] = useState('');
+    const [markdownPath, setMarkdownPath] = useState('');
+    const [docxPath, setDocxPath] = useState('');
     const [isProcessing, setIsProcessing] = useState(false);
 
     const handleFileChange = (e) => {
@@ -17,6 +19,8 @@ export default function Upload() {
         setSuccess('');
         setMinutes('');
         setPdfPath('');
+        setMarkdownPath('');
+        setDocxPath('');
     };
 
     const handleSubmit = async (e) => {
@@ -50,6 +54,8 @@ export default function Upload() {
                 setSuccess('Processing complete');
                 setMinutes(data.minutes);
                 setPdfPath(data.pdfPath);
+                setMarkdownPath(data.markdownPath);
+                setDocxPath(data.docxPath);
             }
         } catch (err) {
             setError('Error processing file');
@@ -82,7 +88,7 @@ export default function Upload() {
         <div className="bg-gradient-to-br from-purple-900 to-black text-white min-h-screen">
             <div className="container mx-auto px-4 py-12">
                 <h1 className="text-3xl md:text-4xl font-bold text-center mb-6">Upload Audio File</h1>
-                <p className="text-center text-lg mb-8">Upload an MP3 or WAV file (up to 25MB) to generate meeting minutes...</p>
+                <p className="text-center text-lg mb-8">Upload an MP3 or WAV file (up to 5MB) to generate meeting minutes...</p>
                 <p className="text-center text-sm text-gray-400 mb-4">Note: Processing may take up to 30 seconds for small files.</p>
 
                 {error && (
@@ -109,8 +115,7 @@ export default function Upload() {
                     <button
                         type="submit"
                         disabled={isProcessing}
-                        className={`w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''
-                            }`}
+                        className={`w-full bg-purple-600 hover:bg-purple-700 text-white font-semibold py-3 px-6 rounded-lg transition duration-300 ${isProcessing ? 'opacity-50 cursor-not-allowed' : ''}`}
                     >
                         Generate Meeting Minutes
                     </button>
@@ -128,13 +133,35 @@ export default function Upload() {
                         <div className="prose prose-invert max-w-none text-gray-200">
                             {renderMarkdown(minutes)}
                         </div>
-                        <a
-                            href={`/api/download?path=${encodeURIComponent(pdfPath)}`}
-                            className="inline-block mt-4 bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300"
-                            download
-                        >
-                            Download Markdown
-                        </a>
+                        <div className="mt-4 flex space-x-4">
+                            {pdfPath && (
+                                <a
+                                    href={`/api/download?path=${encodeURIComponent(pdfPath)}`}
+                                    className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300"
+                                    download
+                                >
+                                    Download PDF
+                                </a>
+                            )}
+                            {markdownPath && (
+                                <a
+                                    href={`/api/download?path=${encodeURIComponent(markdownPath)}`}
+                                    className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300"
+                                    download
+                                >
+                                    Download Markdown
+                                </a>
+                            )}
+                            {docxPath && (
+                                <a
+                                    href={`/api/download?path=${encodeURIComponent(docxPath)}`}
+                                    className="inline-block bg-purple-600 hover:bg-purple-700 text-white font-semibold py-2 px-4 rounded-lg transition duration-300"
+                                    download
+                                >
+                                    Download Word
+                                </a>
+                            )}
+                        </div>
                     </div>
                 )}
 

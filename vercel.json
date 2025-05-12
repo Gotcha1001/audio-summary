@@ -1,7 +1,7 @@
 {
   "functions": {
-    "api/upload.js": {
-      "memory": 3008,
+    "app/api/upload/route.js": {
+      "memory": 1024,
       "maxDuration": 60
     }
   },
